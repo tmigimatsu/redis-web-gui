@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-
 from __future__ import print_function, division
 import threading
 from multiprocessing import Process
@@ -8,76 +7,15 @@ import redis
 import json
 import time
 import sys
-if sys.version.startswith("3"):
-    from http.server import BaseHTTPRequestHandler, HTTPServer
-else:
-    from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
 
 from WebSocketServer import WebSocketServer
+from HTTPRequestHandler import makeHTTPRequestHandler
 
-def isnumeric(s):
-    try:
-        float(s)
-        return True
-    except ValueError:
-        return False
+if sys.version.startswith("3"):
+    from http.server import HTTPServer
+else:
+    from BaseHTTPServer import HTTPServer
 
-
-def makeHTTPRequestHandler(ws_port, redis_db):
-    """
-    Factory method to create HTTPRequestHandler class with ws_port, redis_db
-    """
-
-    class HTTPRequestHandler(BaseHTTPRequestHandler):
-
-        def __init__(self, request, client_address, server):
-            self.redis_db = redis_db
-            BaseHTTPRequestHandler.__init__(self, request, client_address, server)
-
-        def set_headers(self):
-            """
-            Return OK message
-            """
-            self.send_response(200)
-            self.send_header("Content-type", "text/html")
-            self.end_headers()
-
-        def do_GET(self):
-            """
-            Handle GET request
-            """
-            self.set_headers()
-
-            # Insert ws_port into html and return
-            with open("index.html") as f:
-                html = f.read() % {"ws_port": ws_port}
-                self.wfile.write(html.encode("utf-8"))
-
-        def do_POST(self):
-            """
-            Handle POST request
-            """
-            import cgi
-
-            self.set_headers()
-
-            # Parse post content
-            content_type, parse_dict = cgi.parse_header(self.headers["Content-Type"])
-            if content_type == "multipart/form-data":
-                post_vars = cgi.parse_multipart(self.rfile, parse_dict)
-            elif content_type == "application/x-www-form-urlencoded":
-                content_length = int(self.headers["Content-Length"])
-                post_vars = cgi.parse_qs(self.rfile.read(content_length), keep_blank_values=1)
-            else:
-                post_vars = {}
-
-            # Set Redis keys
-            for key, val in post_vars.items():
-                val = " ".join(json.loads(val[0]))
-                print("%s: %s" % (key, val))
-                self.redis_db.set(key, val)
-
-    return HTTPRequestHandler
 
 class RedisMonitor:
     """
@@ -140,6 +78,40 @@ class RedisMonitor:
                 client.send(ws_server.encode_message(keyvals))
             ws_server.lock.release()
 
+    def parse_val(self, key, skip_unchanged=True):
+        """
+        Get the value from Redis and parse if it's an array.
+        If skip_unchanged = True, only returns values updated since the last call.
+        """
+
+        def isnumeric(s):
+            """
+            Helper function to test if string is a number
+            """
+            try:
+                float(s)
+                return True
+            except ValueError:
+                return False
+
+        val = self.redis_db.get(key)
+
+        # Skip if the value hasn't changed
+        if skip_unchanged:
+            if key in self.message_last and val == self.message_last[key]:
+                return None
+            self.message_last[key] = val
+
+        try:
+            # If the first element is a number, try converting all the elements to numbers
+            if isnumeric(val.split(" ")[0]):
+                val = [float(el) for el in val.split(" ") if el.strip()]
+        except:
+            # Otherwise, leave it as a string
+            pass
+
+        return val
+
     def run_forever(self, ws_server):
         """
         Listen for redis keys (either realtime or every refresh_rate seconds)
@@ -155,14 +127,9 @@ class RedisMonitor:
                 for key in self.redis_db.keys():
                     if self.redis_db.type(key) != "string":
                         continue
-                    val = self.redis_db.get(key)
-                    if key in self.message_last and val == self.message_last[key]:
+                    val = self.parse_val(key)
+                    if val is None:
                         continue
-                    self.message_last[key] = val
-
-                    if isnumeric(val.split(" ")[0]):
-                        val = [float(el) for el in val.split(" ") if el.strip()]
-
                     keyvals.append((key, val))
 
                 if not keyvals:
@@ -185,15 +152,9 @@ class RedisMonitor:
                     continue
 
                 key = msg["data"]
-                val = self.redis_db.get(key)
-                if self.redis_db.type(key) != "string":
+                val = self.parse_val(key)
+                if val is None:
                     continue
-                if key in self.message_last and val == self.message_last[key]:
-                    continue
-                self.message_last[key] = val
-
-                if isnumeric(val.split(" ")[0]):
-                    val = [el for el in val.split(" ") if el.strip()]
 
                 self.lock.acquire()
                 self.message_buffer.append((key, val))
@@ -209,17 +170,43 @@ class RedisMonitor:
         for key in sorted(self.redis_db.keys()):
             if self.redis_db.type(key) != "string":
                 continue
-            val = self.redis_db.get(key)
-            if isnumeric(val.split(" ")[0]):
-                val = [el for el in val.split(" ") if el.strip()]
+
+            val = self.parse_val(key, skip_unchanged=False)
+            if val is None:
+                continue
 
             keyvals.append((key, val))
 
         client.send(ws_server.encode_message(keyvals))
 
 
+def handle_get_request(request_handler, get_vars, **kwargs):
+    """
+    HTTPRequestHandler callback:
+
+    Insert ws_port into html and return GET request
+    """
+
+    with open("index.html") as f:
+        html = f.read() % {"ws_port": kwargs["ws_port"]}
+        request_handler.wfile.write(html.encode("utf-8"))
+
+
+def handle_post_request(request_handler, post_vars, **kwargs):
+    """
+    HTTPRequestHandler callback:
+
+    Set POST variables as Redis keys
+    """
+
+    for key, val in post_vars.items():
+        val = " ".join(json.loads(val[0]))
+        print("%s: %s" % (key, val))
+        kwargs["redis_db"].set(key, val)
+
 
 if __name__ == "__main__":
+    # Parse arguments
     parser = ArgumentParser(description=(
         "Monitor Redis keys in the browser."
     ))
@@ -233,9 +220,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Create RedisMonitor, HTTPServer, and WebSocketServer
+    print("Starting up server...\n")
     redis_monitor = RedisMonitor(host=args.redis_host, port=args.redis_port, db=args.redis_db, refresh_rate=args.refresh_rate, realtime=args.realtime)
     print("Connected to Redis database at %s:%d (db %d)" % (args.redis_host, args.redis_port, args.redis_db))
-    http_server = HTTPServer(("", args.http_port), makeHTTPRequestHandler(args.ws_port, redis_monitor.redis_db))
+    get_post_args = {"ws_port": args.ws_port, "redis_db": redis_monitor.redis_db}
+    http_server = HTTPServer(("", args.http_port), makeHTTPRequestHandler(handle_get_request, handle_post_request, get_post_args))
     ws_server = WebSocketServer()
 
     # Start HTTPServer
@@ -250,6 +239,7 @@ if __name__ == "__main__":
     print("Started WebSocket server on port %d\n" % (args.ws_port))
 
     # Start RedisMonitor
+    print("Server ready. Listening for incoming connections.\n")
     redis_monitor.run_forever(ws_server)
 
     http_server_process.join()

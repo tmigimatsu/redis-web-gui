@@ -6,9 +6,12 @@ import struct
 from base64 import b64encode
 from hashlib import sha1
 
+
 class WebSocketServer:
     """
-    Basic implementation for web sockets. Usage:
+    Basic implementation for web sockets.
+    
+    Usage:
 
     ws_server = WebSocketServer()
     ws_server.serve_forever(client_connection_callback, client_message_callback)
@@ -35,7 +38,7 @@ class WebSocketServer:
 
     def __init__(self, port=8001):
         """
-        Set up web socket server on specified port
+        Set up web socket server on specified port.
         """
 
         self.port = port
@@ -48,9 +51,10 @@ class WebSocketServer:
 
     def serve_forever(self, client_connection_callback=None, client_message_callback=None):
         """
-        Listen for web socket requests and spawn new thread for each client
-        On connection, the thread will call client_connection_callback(WebSocketServer, socket)
-        On receiving client messages, the thread will call client_message_callback(WebSocketServer, socket)
+        Listen for web socket requests and spawn new thread for each client.
+
+        On connection, the thread will call client_connection_callback(WebSocketServer, socket).
+        On receiving client messages, the thread will call client_message_callback(WebSocketServer, socket).
         """
 
         while True:
@@ -61,7 +65,7 @@ class WebSocketServer:
 
     def handle_client(self, client, client_connection_callback, client_message_callback):
         """
-        Connect to client and listen for messages until connection is closed
+        Connect to client and listen for messages until connection is closed.
         """
 
         # Handshake with client
@@ -96,10 +100,11 @@ class WebSocketServer:
         self.lock.release()
         client.close()
 
-    def encode_message(self, message):
+    @staticmethod
+    def encode_message(message):
         """
         Encode web socket message to send to client.
-        If the message is an object, it will be encoded as JSON
+        If the message is an object, it will be encoded as JSON.
         """
 
         if type(message) == bytes:
@@ -132,7 +137,8 @@ class WebSocketServer:
 
         return encoded_bytes
 
-    def decode_message(self, message):
+    @staticmethod
+    def decode_message(message):
         """
         Decode web socket message from client
         """

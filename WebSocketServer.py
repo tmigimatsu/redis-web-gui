@@ -96,53 +96,56 @@ class WebSocketServer:
         self.lock.release()
         client.close()
 
-    def encode_message(self, s):
+    def encode_message(self, message):
         """
-        Encode web socket message to send to client
+        Encode web socket message to send to client.
+        If the message is an object, it will be encoded as JSON
         """
 
-        if type(s) == bytes:
-            payload = s
-        elif type(s) == str:
-            payload = s.encode("utf-8")
+        if type(message) == bytes:
+            pass
+        if type(message) == str:
+            message = message.encode("utf-8")
         else:
-            payload = json.dumps(s).encode("utf-8")
+            message = json.dumps(message).encode("utf-8")
 
         # Send entire message as one frame
-        b1 = 0x80
+        b1 = 0b10000000
         # Send text data
-        b1 |= 0x01
-        message = struct.pack("!B", b1)
+        b1 |= 0b00000001
+        encoded_bytes = struct.pack("!B", b1)
 
         # Encode message length
-        length = len(payload)
+        length = len(message)
         if length < 126:
             b2 = length
-            message += struct.pack("!B", b2)
+            encoded_bytes += struct.pack("!B", b2)
         elif length < (2 ** 16) - 1:
             b2 = 126
-            message += struct.pack("!BH", b2, length)
+            encoded_bytes += struct.pack("!BH", b2, length)
         else:
             b2 = 127
-            message += struct.pack("!BQ", b2, length)
+            encoded_bytes += struct.pack("!BQ", b2, length)
 
-        # Append message
-        message += payload
+        # Append encoded_bytes
+        encoded_bytes += message
 
-        return message
+        return encoded_bytes
 
-    def decode_message(self, s):
+    def decode_message(self, message):
         """
         Decode web socket message from client
         """
-        # Turn string values into opererable numeric byte values
-        byte_array = [ord(character) for character in s.decode("utf-8")]
-        if not byte_array:
-            return None
 
-        # TODO: check that op_code is correct
-        op_code = byte_array[0] >> 4
-        payload_length = byte_array[1] & 127
+        if not message:
+            return None
+        elif type(message) == str:
+            message = bytearray(message)
+
+        # Read opcode and length
+        b1, b2 = struct.unpack("!BB", message[:2])
+        op_code = b1 & 0b00001111
+        payload_length = b2 & 0b01111111
 
         # Extract masks
         idx_first_mask = 2
@@ -151,9 +154,11 @@ class WebSocketServer:
         elif payload_length == 127:
             idx_first_mask = 10
         idx_first_data = idx_first_mask + 4
-        masks = [m for m in byte_array[idx_first_mask:idx_first_data]]
+        masks = message[idx_first_mask:idx_first_data]
 
         # Decode data
-        decoded_chars = [chr(byte_array[j] ^ masks[i % 4]) for i, j in enumerate(range(idx_first_data, len(byte_array)))]
+        decoded_bytes = bytearray([message[j] ^ masks[i % 4] for i, j in enumerate(range(idx_first_data, len(message)))])
+        if decoded_bytes == b"\x03\xe9":
+            return None
 
-        return "".join(decoded_chars)
+        return decoded_bytes

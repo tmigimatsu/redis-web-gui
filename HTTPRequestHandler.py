@@ -60,6 +60,7 @@ def makeHTTPRequestHandler(get_callback=None, post_callback=None, callback_args=
 
             # Parse post content
             content_type, parse_dict = cgi.parse_header(self.headers["Content-Type"])
+            parse_dict = {key: val.encode("utf-8") for key, val in parse_dict.items()}
             if content_type == "multipart/form-data":
                 post_vars = cgi.parse_multipart(self.rfile, parse_dict)
             elif content_type == "application/x-www-form-urlencoded":

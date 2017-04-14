@@ -109,7 +109,7 @@ class WebSocketServer:
 
         if type(message) == bytes:
             pass
-        if type(message) == str:
+        elif type(message) == str:
             message = message.encode("utf-8")
         else:
             message = json.dumps(message).encode("utf-8")

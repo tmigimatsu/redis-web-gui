@@ -7,6 +7,7 @@ import redis
 import json
 import time
 import sys
+import math
 
 from WebSocketServer import WebSocketServer
 from HTTPRequestHandler import makeHTTPRequestHandler
@@ -103,9 +104,11 @@ class RedisMonitor:
             self.message_last[key] = val
 
         try:
+            pass
             # If the first element is a number, try converting all the elements to numbers
             if isnumeric(val.split(" ")[0]):
                 val = [float(el) for el in val.split(" ") if el.strip()]
+            val = ["NaN" if math.isnan(el) else el for el in val]
         except:
             # Otherwise, leave it as a string
             pass

@@ -1,3 +1,10 @@
+/**
+ * WebSocketServer.py
+ *
+ * Author: Toki Migimatsu
+ * Created: April 2017
+ */
+
 $(document).ready(function() {
 	// Set up web socket
 	var urlParser = document.createElement("a");
@@ -20,7 +27,7 @@ $(document).ready(function() {
 
 			// Create new redis key-value form
 			if ($form.length == 0) {
-				var form = "<form data-key='" + key + "'><div class='keyval-card'>\n";
+				var form = "<a name='" + key + "'></a><form data-key='" + key + "'><div class='keyval-card'>\n";
 				form += "\t<div class='key-header'>\n";
 				form += "\t\t<label>" + key + "</label>\n";
 				form += "\t\t<input type='submit' value='Set' title='Set values in Redis: <enter>'>\n";
@@ -44,7 +51,9 @@ $(document).ready(function() {
 				}
 				form += "\t</div>\n";
 				form += "</div></form>\n";
-				$("body").append(form);
+				$("#right-col").append(form);
+
+				$("#left-col ul").append("<a href='#" + key + "' title='" + key + "'><li>" + key + "</li></a>")
 				return;
 			}
 
@@ -92,8 +101,8 @@ $(document).ready(function() {
 		});
 	};
 
+	// Send updated key-val pair via POST
 	var ajaxSendRedis = function(key, val) {
-		// Send updated key-val pair via POST
 		data = {};
 		data[key] = JSON.stringify(val);
 		console.log(data);
@@ -104,8 +113,28 @@ $(document).ready(function() {
 		});
 	};
 
+	// Change redis values on form submit
+	$(document).on("submit", "form", function(e) {
+		e.preventDefault();
+
+		var key = $(this).attr("data-key");
+
+		// Collect input values into array
+		var val = $(this).find("input.val").map(function() {
+			var el = $(this).val();
+			var num = parseFloat(el);
+			if (isNaN(num) || el.search(" ") != -1)
+				return el;
+			return num.toString();
+		}).get();
+
+		ajaxSendRedis(key, val);
+	});
+
+
+	// Repeat value of first element
 	$(document).on("click", "input.repeat", function(e) {
-		e.preventDefault(e);
+		e.preventDefault();
 
 		var $form = $(this).closest("form");
 
@@ -130,8 +159,9 @@ $(document).ready(function() {
 		ajaxSendRedis(key, val);
 	});
 
+	// Toggle values between current state and 0
 	$(document).on("click", "input.toggle", function(e) {
-		e.preventDefault(e);
+		e.preventDefault();
 
 		var $form = $(this).closest("form");
 
@@ -174,35 +204,107 @@ $(document).ready(function() {
 		ajaxSendRedis(key, val);
 	});
 
+	// Form submission shortcuts
 	$(document).on("keydown", "form", function(e) {
 		// Click repeat button on <shift-enter>
 		if (e.shiftKey && e.keyCode == 13) {
-			e.preventDefault(e);
+			e.preventDefault();
 			$(this).find("input.repeat").click();
+			return;
 		}
 
+		// Click toggle button on <alt-enter>
 		if (e.altKey && e.keyCode == 13) {
-			e.preventDefault(e);
+			e.preventDefault();
 			$(this).find("input.toggle").click();
+			return;
 		}
 	});
 
-	// Change redis values on form submit
-	$(document).on("submit", "form", function(e) {
-		e.preventDefault(e);
+	// Easy <tab> key jumping
+	var processingAnimation = false;
+	$(document).on("keydown", "input.val", function(e) {
+		if (processingAnimation) {
+			e.preventDefault();
+			return;
+		}
 
-		var key = $(this).attr("data-key");
+		// Select first input of next form if currently in last input of current form
+		if (!e.shiftKey && e.keyCode == 9 && $(this).is(":last-child") && $(this).parent().is(":last-child")) {
+			e.preventDefault();
+			var $nextForm = $(this).closest("form").nextAll("form:first");
+			if ($nextForm.length == 0) return;
 
-		// Collect input values into array
-		var val = $(this).find("input.val").map(function() {
-			var el = $(this).val();
-			var num = parseFloat(el);
-			if (isNaN(num) || el.search(" ") != -1)
-				return el;
-			return num.toString();
-		}).get();
+			// Scroll to next form if out of view
+			var nextFormBottomRel = $nextForm.offset().top + $nextForm.height() + parseInt($nextForm.css("margin-bottom"));
+			var nextFormBottomAbs = nextFormBottomRel + $("#right-col").scrollTop();
+			if (nextFormBottomRel > window.innerHeight) {
+				processingAnimation = true;
+				$("#right-col").animate({scrollTop: nextFormBottomAbs - window.innerHeight}, 200, function() {
+					$nextForm.find("input.val:first").focus();
+					processingAnimation = false;
+				});
+				return;
+			}
+			$nextForm.find("input.val:first").focus();
+		}
 
-		ajaxSendRedis(key, val);
+		// Select last input of previous form if currently in first input of current form
+		if (e.shiftKey && e.keyCode == 9 && $(this).is(":first-child") && $(this).parent().is(":first-child")) {
+			e.preventDefault();
+			var $prevForm = $(this).closest("form").prevAll("form:first");
+			if ($prevForm.length == 0) return;
+
+			// Scroll to previous form if out of view
+			var prevFormTopRel = $prevForm.position().top;
+			var prevFormTopAbs = prevFormTopRel + $("#right-col").scrollTop();
+			if (prevFormTopRel < 0) {
+				processingAnimation = true;
+				$("#right-col").animate({scrollTop: prevFormTopAbs}, 200, function() {
+					$prevForm.find("input.val:last").focus();
+					processingAnimation = false;
+				});
+				return;
+			}
+			$prevForm.find("input.val:last").focus();
+		}
+	});
+
+	// Focus on card selected in key list
+	$(document).on("click", "a", function(e) {
+		var key = this.hash.substr(1);
+		var $form = $("form[data-key='" + key + "']");
+		if ($form.length == 0) return;
+
+		e.preventDefault();
+
+		// Calculate relevant dimensions
+		var $input = $form.find("input.val").eq(0);
+		var windowMiddle = Math.floor(window.innerHeight / 2);
+		var totalHeight = $("#right-col").get(0).scrollHeight;
+		var formMiddleRel = $form.offset().top + Math.floor($form.height() / 2);
+		var formMiddleAbs = formMiddleRel + $("#right-col").scrollTop();
+		var isTop = formMiddleAbs < windowMiddle;
+		var isBottom = totalHeight - formMiddleAbs < windowMiddle;
+
+		var scrollTo = -1;
+		if (isTop && formMiddleRel < formMiddleAbs) {
+			// For top region, scroll to top if not scrolled up as far as possible
+			scrollTo = 0;
+		} else if (isBottom && window.innerHeight - formMiddleRel < totalHeight - formMiddleAbs) {
+			// For bottom region, scroll to bottom if not scrolled down as far as possible
+			scrollTo = totalHeight - window.innerHeight;
+		} else if (!isTop && !isBottom && formMiddleRel != windowMiddle) {
+			// For middle region, scroll desired card to middle of window
+			scrollTo = formMiddleAbs - windowMiddle;
+		}
+		if (scrollTo >= 0) {
+			$('#right-col').animate({scrollTop: scrollTo}, 200, function() {
+				$input.focus();
+			});
+			return;
+		}
+		$input.focus();
 	});
 });
 

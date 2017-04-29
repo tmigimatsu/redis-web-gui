@@ -1,0 +1,62 @@
+form {
+	margin-bottom: 20px;
+}
+.keyval-card {
+	box-shadow: 0 2px 2px 0 rgba(0,0,0,0.14), 0 1px 5px 0 rgba(0,0,0,0.12), 0 3px 1px -2px rgba(0,0,0,0.2);
+}
+.key-header {
+	display: block;
+	font-size: 14.5px;
+	background-color: lightcoral;
+	color: white;
+	padding: 0px 15px;
+	height: 40px;
+	line-height: 40px;
+	font-weight: bold;
+}
+.key-header > input {
+	float: right;
+	border: none;
+	line-height: 40px;
+	padding: 0px 15px;
+	margin: 0px -5px 0px 0px;
+	background-color: transparent;
+	color: white;
+	font-size: 14.5px;
+	outline: none;
+	text-transform: uppercase;
+}
+.key-header > input:hover {
+	background-color: #ea454b;
+	cursor: pointer;
+}
+.val-body {
+	padding: 14px 0px 7px 14px;
+}
+.val-body input.val {
+	font-family: "Inconsolata", monospace;
+	font-size: 14px;
+	width: 100px;
+	border: 1px solid lightgray;
+	outline: none;
+	padding: 0px 6px;
+	line-height: 24px;
+	margin: 0px 3px 7px 0px;
+}
+.val-body input.val:focus {
+	border-bottom: 3px solid lightcoral;
+	margin-bottom: 5px;
+}
+.val-string {
+	width: 342px !important;
+}
+.val-triplet {
+	display: inline-block;
+	margin-right: 14px;
+}
+body {
+	font-family: "Roboto", sans-serif;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+

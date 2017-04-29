@@ -8,6 +8,8 @@ import json
 import time
 import sys
 import math
+import os
+import shutil
 
 from WebSocketServer import WebSocketServer
 from HTTPRequestHandler import makeHTTPRequestHandler
@@ -187,13 +189,33 @@ def handle_get_request(request_handler, get_vars, **kwargs):
     """
     HTTPRequestHandler callback:
 
-    Insert ws_port into html and return GET request
+    Serve content inside WEB_DIRECTORY
     """
+    WEB_DIRECTORY = "web"
+    path_tokens = [token for token in request_handler.path.split("/") if token]
 
-    with open("index.html") as f:
-        html = f.read() % {"ws_port": kwargs["ws_port"]}
+    # Default to index.html
+    if not path_tokens or ".." in path_tokens:
+        request_path = "index.html"
+    else:
+        request_path = os.path.join(*path_tokens)
+    request_path = os.path.join(WEB_DIRECTORY, request_path)
+
+    # Check if file exists
+    if not os.path.isfile(request_path):
+        request_handler.send_error(404, "File not found.")
+        return
+
+    # Insert ws_port into redis-web-gui.js
+    if request_path == os.path.join(WEB_DIRECTORY, "js", "redis-web-gui.js"):
+        with open(request_path) as f:
+            html = f.read() % {"ws_port": kwargs["ws_port"]}
         request_handler.wfile.write(html.encode("utf-8"))
+        return
 
+    # Otherwise send file directly
+    with open(request_path, "rb") as f:
+        shutil.copyfileobj(f, request_handler.wfile)
 
 def handle_post_request(request_handler, post_vars, **kwargs):
     """

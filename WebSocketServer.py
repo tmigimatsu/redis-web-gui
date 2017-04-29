@@ -1,3 +1,10 @@
+"""
+WebSocketServer.py
+
+Author: Toki Migimatsu
+Created: April 2017
+"""
+
 from __future__ import print_function
 import threading
 import socket

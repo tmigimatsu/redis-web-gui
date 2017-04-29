@@ -1,3 +1,10 @@
+"""
+HTTPRequestHandler.py
+
+Author: Toki Migimatsu
+Created: April 2017
+"""
+
 from __future__ import print_function
 import cgi
 import sys
@@ -43,25 +50,19 @@ def makeHTTPRequestHandler(get_callback=None, post_callback=None, callback_args=
             BaseHTTPRequestHandler.__init__(self, request, client_address, server)
 
         def guess_type(self, path):
-            """Guess the type of a file.
-            Argument is a PATH (a filename).
-            Return value is a string of the form type/subtype,
-            usable for a MIME Content-type header.
-            The default implementation looks the file's extension
-            up in the table self.extensions_map, using application/octet-stream
-            as a default; however it would be permissible (if
-            slow) to look inside the data to make a better guess.
+            """
+            Guess the mime type of a file.
             """
 
             base, ext = os.path.splitext(path)
-            print(path, ext, self.extensions_map[ext])
             if ext in self.extensions_map:
                 return self.extensions_map[ext]
+
             ext = ext.lower()
             if ext in self.extensions_map:
                 return self.extensions_map[ext]
-            else:
-                return self.extensions_map['']
+
+            return self.extensions_map[""]
 
         def set_headers(self):
             """
@@ -77,6 +78,7 @@ def makeHTTPRequestHandler(get_callback=None, post_callback=None, callback_args=
             """
             self.set_headers()
 
+            # Call get_callback argument
             if get_callback is not None:
                 get_callback(self, None, **callback_args)
 
@@ -98,6 +100,7 @@ def makeHTTPRequestHandler(get_callback=None, post_callback=None, callback_args=
             else:
                 post_vars = {}
 
+            # Call post_callback argument
             if post_callback is not None:
                 post_callback(self, post_vars, **callback_args)
 

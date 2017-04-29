@@ -1,4 +1,11 @@
 #!/usr/bin/env python
+"""
+server.py
+
+Author: Toki Migimatsu
+Created: April 2017
+"""
+
 from __future__ import print_function, division
 import threading
 from multiprocessing import Process

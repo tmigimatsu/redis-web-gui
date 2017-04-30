@@ -33,6 +33,7 @@ $(document).ready(function() {
 				form += "\t\t<input type='submit' value='Set' title='Set values in Redis: <enter>'>\n";
 				form += "\t\t<input type='button' value='Rep' class='repeat' title='Repeat value of first element: <shift-enter>'>\n";
 				form += "\t\t<input type='button' value='Tog' class='toggle' title='Toggle values between current state and 0: <alt-enter>'>\n";
+				form += "\t\t<input type='button' value='Cpy' class='copy' title='Copy value to clipboard'>\n";
 				form += "\t</div>\n";
 				form += "\t<div class='val-body'>\n";
 				if (typeof(val) === "string") {
@@ -177,6 +178,17 @@ $(document).ready(function() {
 		ajaxSendRedis(key, val);
 	});
 
+	var collectInputValues = function($inputs) {
+		val = $inputs.map(function() {
+			var el = $(this).val();
+			var num = parseFloat(el);
+			if (isNaN(num) || el.search(" ") != -1)
+				return el;
+			return num.toString();
+		}).get();
+		return val;
+	};
+
 	// Toggle values between current state and 0
 	$(document).on("click", "input.toggle", function(e) {
 		e.preventDefault();
@@ -191,13 +203,7 @@ $(document).ready(function() {
 		if (!$form.attr("data-val")) {
 			// Collect input values into array
 			var $inputs = $form.find("input.val");
-			val = $inputs.map(function() {
-				var el = $(this).val();
-				var num = parseFloat(el);
-				if (isNaN(num) || el.search(" ") != -1)
-					return el;
-				return num.toString();
-			}).get();
+			val = collectInputValues($inputs);
 
 			// If val is 0, set to 1
 			var el;
@@ -220,6 +226,21 @@ $(document).ready(function() {
 		}
 
 		ajaxSendRedis(key, val);
+	});
+
+	// Copy values to clipboard
+	$(document).on("click", "input.copy", function(e) {
+		e.preventDefault();
+
+		var $form = $(this).closest("form");
+		var $inputs = $form.find("input.val");
+		var val = collectInputValues($inputs);
+
+		var $temp = $("<input>");
+		$("body").append($temp);
+		$temp.val(val.join(" ")).select();
+		document.execCommand("copy");
+		$temp.remove();
 	});
 
 	// Form submission shortcuts

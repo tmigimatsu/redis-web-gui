@@ -1,5 +1,5 @@
 /**
- * WebSocketServer.py
+ * redis-web-gui.js
  *
  * Author: Toki Migimatsu
  * Created: April 2017

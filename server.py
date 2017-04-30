@@ -113,7 +113,6 @@ class RedisMonitor:
             self.message_last[key] = val
 
         try:
-            pass
             # If the first element is a number, try converting all the elements to numbers
             if isnumeric(val.split(" ")[0]):
                 val = [float(el) for el in val.split(" ") if el.strip()]
@@ -179,6 +178,7 @@ class RedisMonitor:
 
         keyvals = []
 
+        self.message_last = {}
         for key in sorted(self.redis_db.keys()):
             if self.redis_db.type(key) != "string":
                 continue

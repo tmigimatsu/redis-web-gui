@@ -1,3 +1,10 @@
+/**
+ * redis-web-gui.css
+ *
+ * Author: Toki Migimatsu
+ * Created: April 2017
+ */
+
 body {
 	font-family: "Roboto", sans-serif;
 	-webkit-font-smoothing: antialiased;
@@ -6,12 +13,14 @@ body {
 	background-color: #fafafa;
 }
 
+/*** Two column page ***/
 #container {
 	height: 100%;
 }
 #container > #left-col {
 	float: left;
 	height: 100vh;
+	min-width: 200px;
 	margin-right: 10px;
 	overflow-y: auto;
 	background-color: white;
@@ -22,8 +31,7 @@ body {
 	overflow-y: auto;
 }
 
-.link-list {
-}
+/*** Key list ***/
 #left-col h1 {
 	font-size: 14.5px;
 	color: #424242;
@@ -43,25 +51,27 @@ body {
 	line-height: 40px;
 	margin: 0px 20px;
 }
-#left-col a:hover {
-	background-color: #e0e0e0;
-	color: black;
-}
 #left-col a {
 	color: #757575;
 	text-decoration: none;
 	font-weight: normal;
 	display:block
 }
+#left-col a:hover {
+	background-color: #e0e0e0;
+	color: black;
+}
 
+/*** Card block ***/
 form {
 	margin: 15px 15px 20px 10px;
-	/* margin-bottom: 20px; */
 }
 .keyval-card {
 	box-shadow: 0 2px 2px 0 rgba(0,0,0,0.14), 0 1px 5px 0 rgba(0,0,0,0.12), 0 3px 1px -2px rgba(0,0,0,0.2);
 	background-color: white;
 }
+
+/*** Card header ***/
 .key-header {
 	display: block;
 	font-size: 14.5px;
@@ -88,6 +98,8 @@ form {
 	background-color: #ea454b;
 	cursor: pointer;
 }
+
+/*** Card content ***/
 .val-body {
 	padding: 14px 0px 7px 14px;
 }

@@ -51,9 +51,27 @@ $(document).ready(function() {
 				}
 				form += "\t</div>\n";
 				form += "</div></form>\n";
-				$("#right-col").append(form);
+				var $form = $(form).hide();
+				var li = "<a href='#" + key + "' title='" + key + "'><li>" + key + "</li></a>";
+				var $li = $(li).hide();
 
-				$("#left-col ul").append("<a href='#" + key + "' title='" + key + "'><li>" + key + "</li></a>")
+				// Find alphabetical ordering
+				var keys = $("form").map(function() {
+					return $(this).attr("data-key");
+				}).get();
+				var idx_key;
+				for (idx_key = 0; idx_key < keys.length; idx_key++) {
+					if (key < keys[idx_key]) break;
+				}
+				if (idx_key < keys.length) {
+					$("form").eq(idx_key).before($form);
+					$("#left-col a").eq(idx_key).before($li);
+				} else {
+					$("#right-col").append($form);
+					$("#left-col ul").append($li)
+				}
+				$form.slideDown("normal");
+				$li.slideDown("normal");
 				return;
 			}
 

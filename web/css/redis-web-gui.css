@@ -21,14 +21,21 @@ body {
 	float: left;
 	height: 100vh;
 	min-width: 200px;
-	margin-right: 10px;
+	/* margin-right: 10px; */
 	overflow-y: auto;
 	background-color: white;
 	box-shadow: 0 4px 5px 0 rgba(0,0,0,.14), 0 1px 10px 0 rgba(0,0,0,.12), 0 2px 4px -1px rgba(0,0,0,.2)
 }
-#container > #right-col {
+#container #right-col {
 	height: 100vh;
 	overflow-y: auto;
+	display: flex;
+}
+#container #keyval-card-container {
+	display: inline-flex;
+	flex-direction: column;
+	flex-grow: 1;
+	padding: 20px 20px 0px 20px;
 }
 
 /*** Key list ***/
@@ -62,18 +69,29 @@ body {
 	color: black;
 }
 
+@media (max-width: 900px) {
+	#left-col {
+		display: none;
+	}
+}
+
 /*** Card block ***/
 form {
-	margin: 18px 18px 20px 10px;
+	/* margin: 18px 18px 20px 10px; */
+	margin: 0px 0px 20px 0px;
 }
 .keyval-card {
+	/* display: inline-block; */
+	/* Need to somehow use min-width here */
 	box-shadow: 0 2px 2px 0 rgba(0,0,0,0.14), 0 1px 5px 0 rgba(0,0,0,0.12), 0 3px 1px -2px rgba(0,0,0,0.2);
 	background-color: white;
 }
 
 /*** Card header ***/
 .key-header {
-	display: block;
+	/* display: block; */
+	display: flex;
+	justify-content: space-between;
 	font-size: 14.5px;
 	background-color: lightcoral;
 	color: white;
@@ -82,8 +100,10 @@ form {
 	line-height: 40px;
 	font-weight: bold;
 }
-.key-header > input {
-	float: right;
+.key-header .buttons {
+	display: flex;
+}
+.key-header input {
 	border: none;
 	line-height: 40px;
 	padding: 0px 15px;
@@ -94,7 +114,7 @@ form {
 	outline: none;
 	text-transform: uppercase;
 }
-.key-header > input:hover {
+.key-header input:hover {
 	background-color: #ea454b;
 	cursor: pointer;
 }

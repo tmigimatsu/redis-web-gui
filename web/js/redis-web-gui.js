@@ -30,10 +30,12 @@ $(document).ready(function() {
 				var form = "<a name='" + key + "'></a><form data-key='" + key + "'><div class='keyval-card'>\n";
 				form += "\t<div class='key-header'>\n";
 				form += "\t\t<label>" + key + "</label>\n";
-				form += "\t\t<input type='submit' value='Set' title='Set values in Redis: <enter>'>\n";
-				form += "\t\t<input type='button' value='Rep' class='repeat' title='Repeat value of first element: <shift-enter>'>\n";
-				form += "\t\t<input type='button' value='Tog' class='toggle' title='Toggle values between current state and 0: <alt-enter>'>\n";
-				form += "\t\t<input type='button' value='Cpy' class='copy' title='Copy value to clipboard'>\n";
+				form += "\t\t<div class='buttons'>\n";
+				form += "\t\t\t<input type='button' value='Cpy' class='copy' title='Copy value to clipboard'>\n";
+				form += "\t\t\t<input type='button' value='Tog' class='toggle' title='Toggle values between current state and 0: <alt-enter>'>\n";
+				form += "\t\t\t<input type='button' value='Rep' class='repeat' title='Repeat value of first element: <shift-enter>'>\n";
+				form += "\t\t\t<input type='submit' value='Set' title='Set values in Redis: <enter>'>\n";
+				form += "\t\t</div>\n";
 				form += "\t</div>\n";
 				form += "\t<div class='val-body'>\n";
 				if (typeof(val) === "string") {
@@ -68,7 +70,7 @@ $(document).ready(function() {
 					$("form").eq(idx_key).before($form);
 					$("#left-col a").eq(idx_key).before($li);
 				} else {
-					$("#right-col").append($form);
+					$("#keyval-card-container").append($form);
 					$("#left-col ul").append($li)
 				}
 				$form.slideDown("normal");

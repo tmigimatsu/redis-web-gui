@@ -110,13 +110,14 @@ class RedisMonitor:
         if skip_unchanged:
             if key in self.message_last and val == self.message_last[key]:
                 return None
-            self.message_last[key] = val
+        self.message_last[key] = val
 
         try:
             # If the first element is a number, try converting all the elements to numbers
             if isnumeric(val.split(" ")[0]):
-                val = [float(el) for el in val.split(" ") if el.strip()]
-            val = ["NaN" if math.isnan(el) else el for el in val]
+                # Parse matrix rows
+                val = [[float(el) for el in row.split(" ") if el.strip()] for row in val.split(";")]
+                val = [["NaN" if math.isnan(el) else el for el in row] for row in val]
         except:
             # Otherwise, leave it as a string
             pass
@@ -135,7 +136,7 @@ class RedisMonitor:
                 time.sleep(self.refresh_rate)
 
                 keyvals = []
-                for key in self.redis_db.keys():
+                for key in self.redis_db.scan_iter():
                     if self.redis_db.type(key) != "string":
                         continue
                     val = self.parse_val(key)
@@ -179,7 +180,7 @@ class RedisMonitor:
         keyvals = []
 
         self.message_last = {}
-        for key in sorted(self.redis_db.keys()):
+        for key in sorted(self.redis_db.scan_iter()):
             if self.redis_db.type(key) != "string":
                 continue
 
@@ -231,8 +232,12 @@ def handle_post_request(request_handler, post_vars, **kwargs):
     Set POST variables as Redis keys
     """
 
-    for key, val in post_vars.items():
-        val = " ".join(json.loads(val[0]))
+    for key, val_str in post_vars.items():
+        val_json = json.loads(val_str[0])
+        if type(val_json) in (str, unicode):
+            val = val_json
+        else:
+            val = "; ".join(" ".join(row) for row in val_json)
         print("%s: %s" % (key, val))
         kwargs["redis_db"].set(key, val)
 

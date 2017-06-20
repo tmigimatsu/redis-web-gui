@@ -137,7 +137,7 @@ form {
 	border-bottom: 3px solid lightcoral;
 	margin-bottom: 5px;
 }
-.val-string {
+.val-string input.val {
 	width: 342px !important;
 }
 .val-triplet {

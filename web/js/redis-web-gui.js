@@ -5,11 +5,85 @@
  * Created: April 2017
  */
 
+function htmlForm(key, val) {
+	var form = "<a name='" + key + "'></a><form data-key='" + key + "'><div class='keyval-card'>\n";
+	form += "\t<div class='key-header'>\n";
+	form += "\t\t<label>" + key + "</label>\n";
+	form += "\t\t<div class='buttons'>\n";
+	form += "\t\t\t<input type='button' value='Cpy' class='copy' title='Copy value to clipboard'>\n";
+	form += "\t\t\t<input type='button' value='Tog' class='toggle' title='Toggle values between current state and 0: <alt-enter>'>\n";
+	form += "\t\t\t<input type='button' value='Rep' class='repeat' title='Repeat value of first element: <shift-enter>'>\n";
+	form += "\t\t\t<input type='submit' value='Set' title='Set values in Redis: <enter>'>\n";
+	form += "\t\t</div>\n";
+	form += "\t</div>\n";
+	form += "\t<div class='val-body'>\n";
+	if (typeof(val) === "string") {
+		form += "\t\t<div class='val-row'>\n";
+		form += "\t\t\t<div class='val-string'>\n";
+		form += "\t\t\t\t<input class='val' type='text' value='" + val + "'>\n";
+		form += "\t\t\t</div>\n";
+		form += "\t\t</div>\n";
+	} else { // val should be a 2D array
+		val.forEach(function(row, idx_row) {
+			form += "\t\t<div class='val-row'>\n";
+			row.forEach(function(el, idx) {
+				if (idx %% 3 == 0) {
+					form += "\t\t\t<div class='val-triplet'>\n";
+				}
+				form += "\t\t\t\t<input class='val' type='text' value='" + el + "'>\n";
+				if (idx %% 3 == 2 || idx == row.length - 1) {
+					form += "\t\t\t</div>\n";
+				}
+			});
+			form += "\t\t</div>\n";
+		});
+	}
+	form += "\t</div>\n";
+	form += "</div></form>\n";
+	return form;
+}
+
+function getMatrix($form) {
+	return $form.find("div.val-row").map(function() {
+		return [$(this).find("input.val").map(function() {
+			return $(this).val();
+		}).get().filter(function(el) {
+			return el != "";
+		})];
+	}).get();
+}
+
+function fillMatrix(matrix, num) {
+	matrix.forEach(function(row) {
+		row.forEach(function(el, idx) {
+			row[idx] = num.toString();
+		});
+	});
+}
+
+function matrixToString(matrix) {
+	return matrix.map(function(row) {
+		return row.join(" ");
+	}).join("; ");
+}
+
+// Send updated key-val pair via POST
+function ajaxSendRedis(key, val) {
+	data = {};
+	data[key] = JSON.stringify(val);
+	console.log(data);
+	$.ajax({
+		method: "POST",
+		url: "/",
+		data: data
+	});
+}
+
 $(document).ready(function() {
 	// Set up web socket
-	var urlParser = document.createElement("a");
-	urlParser.href = window.location.href;
-	var ws_ip = urlParser.hostname;
+	var url_parser = document.createElement("a");
+	url_parser.href = window.location.href;
+	var ws_ip = url_parser.hostname;
 	var ws_port = %(ws_port)s;
 	var ws = new WebSocket("ws://" + ws_ip + ":" + ws_port);
 
@@ -21,39 +95,14 @@ $(document).ready(function() {
 		// console.log(e.data);
 		var msg = JSON.parse(e.data);
 		msg.forEach(function(m) {
+			// console.log(m);
 			var key = m[0];
 			var val = m[1];
 			var $form = $("form[data-key='" + key + "']");
 
 			// Create new redis key-value form
 			if ($form.length == 0) {
-				var form = "<a name='" + key + "'></a><form data-key='" + key + "'><div class='keyval-card'>\n";
-				form += "\t<div class='key-header'>\n";
-				form += "\t\t<label>" + key + "</label>\n";
-				form += "\t\t<div class='buttons'>\n";
-				form += "\t\t\t<input type='button' value='Cpy' class='copy' title='Copy value to clipboard'>\n";
-				form += "\t\t\t<input type='button' value='Tog' class='toggle' title='Toggle values between current state and 0: <alt-enter>'>\n";
-				form += "\t\t\t<input type='button' value='Rep' class='repeat' title='Repeat value of first element: <shift-enter>'>\n";
-				form += "\t\t\t<input type='submit' value='Set' title='Set values in Redis: <enter>'>\n";
-				form += "\t\t</div>\n";
-				form += "\t</div>\n";
-				form += "\t<div class='val-body'>\n";
-				if (typeof(val) === "string") {
-					form += "\t\t<input class='val val-string' type='text' value='" + val + "'>\n";
-				} else {
-					val.forEach(function(el, idx) {
-						if (idx %% 3 == 0) {
-							form += "\t\t<div class='val-triplet'>\n";
-						}
-						form += "\t\t\t<input class='val' type='text' value='" + el + "'>\n";
-						if (idx %% 3 == 2) {
-							form += "\t\t</div>\n";
-						}
-
-					});
-				}
-				form += "\t</div>\n";
-				form += "</div></form>\n";
+				var form = htmlForm(key, val);
 				var $form = $(form).hide();
 				var li = "<a href='#" + key + "' title='" + key + "'><li>" + key + "</li></a>";
 				var $li = $(li).hide();
@@ -78,149 +127,70 @@ $(document).ready(function() {
 				return;
 			}
 
-			// Update redis val as simple string
+			// Store focus
 			var $inputs = $form.find("input.val");
-			if (typeof(val) === "string" && val != "NaN") {
-				for (var i = 1; i < $inputs.length; i++) {
-					$inputs.eq(i).remove();
+			var idx_input = -1;
+			for (var i = 0; i < $inputs.length; i++) {
+				if ($inputs.eq(i).is(":focus")) {
+					idx_input = i;
+					break;
 				}
-				$inputs.eq(0).val(val);
-				$inputs.addClass("val-string");
-				return;
 			}
+			$form.html(htmlForm(key, val));
 
-			// Update redis val as array
-			val.forEach(function(el, idx) {
-				var $input = $inputs.eq(idx);
-				$input.removeClass("val-string");
-
-				// Extend array if necessary
-				if ($input.length == 0) {
-					if (idx %% 3 == 0) {
-						var div = "<div class='val-triplet'>\n";
-						div += "\t\t<input class='val' type='text' value='" + el + "'>\n";
-						div += "</div>";
-						$form.find("input.val").eq(idx - 1).parent().after(div);
-						return;
-					}
-					var input = "\t\t<input class='val' type='text' value='" + el + "'>\n";
-					$form.find("input.val").eq(idx - 1).after(input);
-					return;
-				}
-
-				$input.val(el);
-			});
-
-			// Shorten array if necessary
-			for (var i = val.length; i < $inputs.length; i++) {
-				if (i %% 3 == 0) {
-					$inputs.eq(i).parent().remove();
-					continue;
-				}
-				$inputs.eq(i).remove();
+			// Restore focus
+			if (idx_input >= 0) {
+				var $input = $form.find("input.val").eq(idx_input);
+				var val_input = $input.val();
+				$input.focus().val("").val(val_input);
 			}
 		});
 	};
 
-	// Send updated key-val pair via POST
-	var ajaxSendRedis = function(key, val) {
-		data = {};
-		data[key] = JSON.stringify(val);
-		console.log(data);
-		$.ajax({
-			method: "POST",
-			url: "/",
-			data: data
-		});
-	};
-
-	// Change redis values on form submit
+	// Send redis values on form submit
 	$(document).on("submit", "form", function(e) {
 		e.preventDefault();
 
-		var key = $(this).attr("data-key");
-
-		// Collect input values into array
-		var val = $(this).find("input.val").map(function() {
-			var el = $(this).val();
-			var num = parseFloat(el);
-			if (isNaN(num) || el.search(" ") != -1)
-				return el;
-			return num.toString();
-		}).get();
+		// Get keyval
+		var $form = $(this);
+		var key = $form.attr("data-key");
+		var val = getMatrix($form);
 
 		ajaxSendRedis(key, val);
 	});
-
 
 	// Repeat value of first element
 	$(document).on("click", "input.repeat", function(e) {
 		e.preventDefault();
 
+		// Get keyval
 		var $form = $(this).closest("form");
-
-		// Get key
 		var key = $form.attr("data-key");
+		var val = getMatrix($form);
 
-		// Get first value in array
-		var $inputs = $form.find("input.val");
-		var el = $inputs.eq(0).val();
-		var num = parseFloat(el);
-		if (isNaN(num) || el.search(" ") != -1) {
-			console.log("Can't repeat a non-number");
-			return;
-		}
-
-		// Create full array from num
-		var val = [];
-		for (var i = 0; i < $inputs.length; i++) {
-			val.push(num.toString());
-		}
+		// Fill array with num
+		fillMatrix(val, val[0][0]);
 
 		ajaxSendRedis(key, val);
 	});
-
-	var collectInputValues = function($inputs) {
-		val = $inputs.map(function() {
-			var el = $(this).val();
-			var num = parseFloat(el);
-			if (isNaN(num) || el.search(" ") != -1)
-				return el;
-			return num.toString();
-		}).get();
-		return val;
-	};
 
 	// Toggle values between current state and 0
 	$(document).on("click", "input.toggle", function(e) {
 		e.preventDefault();
 
-		var $form = $(this).closest("form");
-
 		// Get key
+		var $form = $(this).closest("form");
 		var key = $form.attr("data-key");
 
 		// Get val
 		var val;
 		if (!$form.attr("data-val")) {
-			// Collect input values into array
-			var $inputs = $form.find("input.val");
-			val = collectInputValues($inputs);
+			// Store current matrix in form attribute
+			val = getMatrix($form);
+			$form.attr("data-val", JSON.stringify(val));
 
-			// If val is 0, set to 1
-			var el;
-			if (val == "0") {
-				el = "1";
-			} else {
-				el = "0";
-				$form.attr("data-val", JSON.stringify(val));
-			}
-
-			// Create full array from num
-			val = [];
-			for (var i = 0; i < $inputs.length; i++) {
-				val.push(el);
-			}
+			// Fill array with 0
+			fillMatrix(val, 0);
 		} else {
 			// Get stored val and restore it
 			val = JSON.parse($form.attr("data-val"));
@@ -234,13 +204,14 @@ $(document).ready(function() {
 	$(document).on("click", "input.copy", function(e) {
 		e.preventDefault();
 
+		// Get val
 		var $form = $(this).closest("form");
-		var $inputs = $form.find("input.val");
-		var val = collectInputValues($inputs);
+		var val = matrixToString(getMatrix($form));
 
+		// Create temporary input to copy to clipboard
 		var $temp = $("<input>");
 		$("body").append($temp);
-		$temp.val(val.join(" ")).select();
+		$temp.val(val).select();
 		document.execCommand("copy");
 		$temp.remove();
 	});
@@ -271,9 +242,12 @@ $(document).ready(function() {
 		}
 
 		// Select first input of next form if currently in last input of current form
-		if (!e.shiftKey && e.keyCode == 9 && $(this).is(":last-child") && $(this).parent().is(":last-child")) {
+		var $this = $(this);
+		if (!e.shiftKey && e.keyCode == 9 && $this.is(":last-child")
+		    && $this.parent().is(":last-child") && $this.parent().parent().is(":last-child"))
+		{
 			e.preventDefault();
-			var $nextForm = $(this).closest("form").nextAll("form:first");
+			var $nextForm = $this.closest("form").nextAll("form:first");
 			if ($nextForm.length == 0) return;
 
 			// Scroll to next form if out of view
@@ -291,9 +265,10 @@ $(document).ready(function() {
 		}
 
 		// Select last input of previous form if currently in first input of current form
-		if (e.shiftKey && e.keyCode == 9 && $(this).is(":first-child") && $(this).parent().is(":first-child")) {
+		if (e.shiftKey && e.keyCode == 9 && $this.is(":first-child")
+			&& $this.parent().is(":first-child") && $this.parent().parent().is(":first-child")) {
 			e.preventDefault();
-			var $prevForm = $(this).closest("form").prevAll("form:first");
+			var $prevForm = $this.closest("form").prevAll("form:first");
 			if ($prevForm.length == 0) return;
 
 			// Scroll to previous form if out of view

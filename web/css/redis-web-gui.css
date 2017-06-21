@@ -35,7 +35,7 @@ body {
 	display: inline-flex;
 	flex-direction: column;
 	flex-grow: 1;
-	padding: 20px 20px 0px 20px;
+	padding: 20px 20px 20px 20px;
 }
 
 /*** Key list ***/
@@ -69,11 +69,11 @@ body {
 	color: black;
 }
 
-@media (max-width: 900px) {
+/*@media (max-width: 900px) {
 	#left-col {
 		display: none;
 	}
-}
+}*/
 
 /*** Card block ***/
 form {
@@ -137,10 +137,13 @@ form {
 	border-bottom: 3px solid lightcoral;
 	margin-bottom: 5px;
 }
+.val-string {
+	margin-right: 11px;
+}
 .val-string input.val {
 	width: 342px !important;
 }
 .val-triplet {
 	display: inline-block;
-	margin-right: 14px;
+	margin-right: 11px;
 }

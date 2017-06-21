@@ -79,6 +79,14 @@ function ajaxSendRedis(key, val) {
 	});
 }
 
+function toggleSidebar() {
+	var container = $("#container").get(0);
+	$("#left-col").show();
+	if (container.clientWidth < $("#right-col").get(0).scrollWidth + $("#left-col").width()) {
+		$("#left-col").hide();
+	}
+}
+
 $(document).ready(function() {
 	// Set up web socket
 	var url_parser = document.createElement("a");
@@ -145,6 +153,8 @@ $(document).ready(function() {
 				$input.focus().val("").val(val_input);
 			}
 		});
+
+		toggleSidebar();
 	};
 
 	// Send redis values on form submit
@@ -322,5 +332,8 @@ $(document).ready(function() {
 		}
 		$input.focus();
 	});
+
+	// Hide sidebar when window is too small
+	$(window).resize(toggleSidebar);
 });
 

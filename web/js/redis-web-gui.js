@@ -44,7 +44,7 @@ function htmlForm(key, val) {
 }
 
 function updateHtmlValues($form, val) {
-	var $inputs = $form.find("input.class");
+	var $inputs = $form.find("input.val");
 	var i = 0;
 	val.forEach(function(row) {
 		row.forEach(function(el) {

@@ -43,6 +43,17 @@ function htmlForm(key, val) {
 	return form;
 }
 
+function updateHtmlValues($form, val) {
+	var $inputs = $form.find("input.class");
+	var i = 0;
+	val.forEach(function(row) {
+		row.forEach(function(el) {
+			$inputs.eq(i).val(el);
+			i++;
+		});
+	});
+}
+
 function getMatrix($form) {
 	return $form.find("div.val-row").map(function() {
 		return [$(this).find("input.val").map(function() {
@@ -65,6 +76,11 @@ function matrixToString(matrix) {
 	return matrix.map(function(row) {
 		return row.join(" ");
 	}).join("; ");
+}
+
+function matrixDim(val) {
+	if (typeof(val) === "string") return "";
+	return [val.length, val[0].length].toString();
 }
 
 // Send updated key-val pair via POST
@@ -99,6 +115,7 @@ $(document).ready(function() {
 		console.log("Web socket connection established.");
 	};
 
+	var matrix_dims = {};
 	ws.onmessage = function(e) {
 		// console.log(e.data);
 		var msg = JSON.parse(e.data);
@@ -110,6 +127,9 @@ $(document).ready(function() {
 
 			// Create new redis key-value form
 			if ($form.length == 0) {
+				// Store size of matrix value
+				matrix_dims[key] = matrixDim(val);
+
 				var form = htmlForm(key, val);
 				var $form = $(form).hide();
 				var li = "<a href='#" + key + "' title='" + key + "'><li>" + key + "</li></a>";
@@ -135,23 +155,35 @@ $(document).ready(function() {
 				return;
 			}
 
-			// Store focus
-			var $inputs = $form.find("input.val");
-			var idx_input = -1;
-			for (var i = 0; i < $inputs.length; i++) {
-				if ($inputs.eq(i).is(":focus")) {
-					idx_input = i;
-					break;
-				}
-			}
-			$form.html(htmlForm(key, val));
+			var matrix_dim = matrixDim(val);
+			if (matrix_dim != matrix_dims[key]) {
+				// Recreate html for resized matrix
+				matrix_dims[key] = matrix_dim;
 
-			// Restore focus
-			if (idx_input >= 0) {
-				var $input = $form.find("input.val").eq(idx_input);
-				var val_input = $input.val();
-				$input.focus().val("").val(val_input);
+				// Store focus
+				var $inputs = $form.find("input.val");
+				var idx_input = -1;
+				for (var i = 0; i < $inputs.length; i++) {
+					if ($inputs.eq(i).is(":focus")) {
+						idx_input = i;
+						break;
+					}
+				}
+
+				// Replace html
+				$form.html(htmlForm(key, val));
+
+				// Restore focus
+				if (idx_input >= 0) {
+					var $input = $form.find("input.val").eq(idx_input);
+					var val_input = $input.val();
+					$input.focus().val("").val(val_input);
+				}
+				return;
 			}
+
+			// Update html
+			updateHtmlValues($form, val);
 		});
 
 		toggleSidebar();

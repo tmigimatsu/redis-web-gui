@@ -44,7 +44,14 @@ function htmlForm(key, val) {
 }
 
 function updateHtmlValues($form, val) {
-	var $inputs = $form.find("input.class");
+	// Update string
+	var $inputs = $form.find("input.val");
+	if (typeof(val) === "string") {
+		$inputs.eq(0).val(val);
+		return;
+	}
+
+	// Update matrix
 	var i = 0;
 	val.forEach(function(row) {
 		row.forEach(function(el) {
@@ -55,12 +62,12 @@ function updateHtmlValues($form, val) {
 }
 
 function getMatrix($form) {
+	if ($form.find("div.val-string").length > 0)
+		return $form.find("input.val").val();
 	return $form.find("div.val-row").map(function() {
 		return [$(this).find("input.val").map(function() {
 			return $(this).val();
-		}).get().filter(function(el) {
-			return el != "";
-		})];
+		}).get().filter(el => el != "")];
 	}).get();
 }
 
@@ -229,10 +236,19 @@ $(document).ready(function() {
 		if (!$form.attr("data-val")) {
 			// Store current matrix in form attribute
 			val = getMatrix($form);
-			$form.attr("data-val", JSON.stringify(val));
+			if (typeof(val) === "string") {
+				// Replace strings with empty string
+				$form.attr("data-val", JSON.stringify(val));
+				val = "";
+			} else if (val.every(row => row.every(el => el == 0))) {
+				// If every element is 0, fill with ones
+				fillMatrix(val, 1);
+			} else {
+				$form.attr("data-val", JSON.stringify(val));
 
-			// Fill array with 0
-			fillMatrix(val, 0);
+				// Fill array with 0
+				fillMatrix(val, 0);
+			}
 		} else {
 			// Get stored val and restore it
 			val = JSON.parse($form.attr("data-val"));

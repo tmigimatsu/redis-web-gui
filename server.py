@@ -262,7 +262,7 @@ if __name__ == "__main__":
     print("Connected to Redis database at %s:%d (db %d)" % (args.redis_host, args.redis_port, args.redis_db))
     get_post_args = {"ws_port": args.ws_port, "redis_db": redis_monitor.redis_db}
     http_server = HTTPServer(("", args.http_port), makeHTTPRequestHandler(handle_get_request, handle_post_request, get_post_args))
-    ws_server = WebSocketServer()
+    ws_server = WebSocketServer(port=args.ws_port)
 
     # Start HTTPServer
     http_server_process = Process(target=http_server.serve_forever)
